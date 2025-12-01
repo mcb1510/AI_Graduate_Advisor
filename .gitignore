@@ -1,0 +1,56 @@
+# ==================== Environment & Secrets ====================
+# Contains API keys (GROQ_API_KEY, OPENAI_API_KEY, etc.)
+.env
+.env.*
+
+# ==================== Python ====================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+
+# ==================== Virtual Environments ====================
+.venv/
+venv/
+ENV/
+env/
+
+# ==================== IDE/Editor ====================
+# VSCode
+.vscode/
+
+# PyCharm
+.idea/
+
+# Vim swap files
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# ==================== Build/Distribution ====================
+build/
+dist/
+*.egg-info/
+*.egg
+
+# ==================== Testing ====================
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ==================== Jupyter Notebooks ====================
+.ipynb_checkpoints/
+
+# ==================== Project-specific ====================
+# Note: embeddings.npy is currently tracked in the repository.
+# Consider storing this file externally (S3, Git LFS, etc.) and
+# uncommenting the line below to prevent accidental commits:
+# embeddings.npy
