@@ -133,9 +133,10 @@ if user_query := st.chat_input("Ask me anything about graduate advising at BSU..
         with st.spinner("Thinking..."):
             # Call the response engine to generate an answer
             # Pass conversation history so AI has context
-            answer = st.session_state.generator.generate_answer(
+            answer = st.session_state.generator.ask(
                 user_query,  # The current question
-                history=st.session_state.messages[:-1]  # All previous messages (not including the one we just added)
+                history=st.session_state.messages[:-1],  # All previous messages (not including the one we just added)
+                use_rag=True  # Enable RAG for better answers
             )
         # Display the AI's response
         st.write(answer)
