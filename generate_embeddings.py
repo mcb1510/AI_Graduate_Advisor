@@ -17,8 +17,10 @@ def main():
 
     print(f"[INFO] Loaded {len(texts)} faculty profiles.")
 
-    print("[INFO] Loading SentenceTransformer model: all-MiniLM-L6-v2")
-    model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+    print("[INFO] Loading SentenceTransformer model: BAAI/bge-large-en-v1.5")
+    print("[INFO] This model is optimized for retrieval tasks (1024 dimensions)")
+    model = SentenceTransformer("BAAI/bge-large-en-v1.5")
+
 
     print("[INFO] Generating embeddings...")
     embeddings = model.encode(texts, batch_size=16, show_progress_bar=True)
