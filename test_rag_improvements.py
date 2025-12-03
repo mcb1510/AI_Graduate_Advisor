@@ -149,7 +149,7 @@ def main():
         print("1. Regenerate embeddings: python generate_embeddings.py")
         print("2. Test retrieval: python retrieval_scores_tests.py")
         print("3. Full evaluation (requires GROQ_API_KEY):")
-        print("   python -c 'from response_engine import ResponseEngine; from rag_evaluator import RAGEvaluator; e = RAGEvaluator(); engine = ResponseEngine(); results = e.evaluate(engine); e.generate_report(results)'")
+        print("   python run_evaluation.py")
         print()
         
     except Exception as e:

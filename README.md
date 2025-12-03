@@ -111,8 +111,8 @@ streamlit run chatbot_demo.py
 # Quick retrieval test
 python retrieval_scores_tests.py
 
-# Full evaluation with RAG engine
-python -c "from response_engine import ResponseEngine; from rag_evaluator import RAGEvaluator; e = RAGEvaluator(); engine = ResponseEngine(); results = e.evaluate(engine); e.generate_report(results)"
+# Full evaluation with RAG engine (requires GROQ_API_KEY)
+python run_evaluation.py
 ```
 
 ### Test Query Expansion
@@ -192,8 +192,8 @@ python retrieval_scores_tests.py
 # Test query expansion
 python -c "from response_engine import QueryProcessor; p = QueryProcessor(); print(p.expand_query('AI and security'))"
 
-# Full evaluation
-python -c "from response_engine import ResponseEngine; from rag_evaluator import RAGEvaluator; e = RAGEvaluator(); engine = ResponseEngine(); results = e.evaluate(engine); e.generate_report(results)"
+# Full evaluation (requires GROQ_API_KEY)
+python run_evaluation.py
 ```
 
 ### Regenerating Embeddings

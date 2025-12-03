@@ -45,7 +45,7 @@ def main():
     with open("faculty_ids.json", "w", encoding="utf-8") as f:
         json.dump(names, f, indent=4)
 
-    print("[INFO] Saving faculty texts (for retrieval)…")
+    print("[INFO] Saving faculty texts (for retrieval)...")
     with open("faculty_texts.json", "w", encoding="utf-8") as f:
         json.dump(texts, f, indent=4)
 
