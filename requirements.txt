@@ -14,13 +14,16 @@ requests
 python-dotenv
 
 # Sentence Transformers - For advanced RAG embeddings
-sentence-transformers>=2.2.0
+# Version pinned to avoid breaking changes
+sentence-transformers>=2.2.0,<4.0.0
 
 # Scikit-learn - For machine learning utilities and metrics
-scikit-learn>=1.3.0
+# Version pinned to avoid breaking changes
+scikit-learn>=1.3.0,<2.0.0
 
 # NumPy - For numerical operations
-numpy>=1.24.0
+# Compatible with recent versions
+numpy>=1.24.0,<2.0.0
 
 # streamlit
 # pandas

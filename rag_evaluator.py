@@ -377,11 +377,13 @@ class RAGEvaluator:
         
         report_text = "\n".join(report)
         
-        # Write to file
-        with open(filename, 'w', encoding='utf-8') as f:
-            f.write(report_text)
-        
-        print(f"\n[INFO] Report saved to {filename}")
+        # Write to file with error handling
+        try:
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write(report_text)
+            print(f"\n[INFO] Report saved to {filename}")
+        except IOError as e:
+            print(f"\n[ERROR] Failed to save report to {filename}: {e}")
         
         return report_text
 

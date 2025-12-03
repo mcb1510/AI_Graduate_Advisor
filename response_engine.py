@@ -12,6 +12,7 @@ from sklearn.preprocessing import normalize
 load_dotenv()
 
 MODEL_NAME = "llama-3.3-70b-versatile"
+EMBEDDING_MODEL = "BAAI/bge-large-en-v1.5"  # Embedding model for RAG
 
 
 # ============================
@@ -194,8 +195,8 @@ class ResponseEngine:
                 )
 
             # SentenceTransformers model for query encoding (upgraded to BGE model)
-            print("[RAG] Loading embedding model: BAAI/bge-large-en-v1.5")
-            self.embed_model = SentenceTransformer("BAAI/bge-large-en-v1.5")
+            print(f"[RAG] Loading embedding model: {EMBEDDING_MODEL}")
+            self.embed_model = SentenceTransformer(EMBEDDING_MODEL)
 
             # Ensure embeddings are L2-normalized (just in case)
             self.embeddings = normalize(self.embeddings)
@@ -342,6 +343,7 @@ class ResponseEngine:
                 return [candidates[0]]
         
         # Return between min_results and max_results based on confidence
+        # Ensure at least min_results (if available) and at most max_results
         num_results = min(len(candidates), max_results)
         num_results = max(num_results, min(min_results, len(candidates)))
         

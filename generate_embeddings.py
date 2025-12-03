@@ -4,6 +4,9 @@ import pandas as pd
 from sentence_transformers import SentenceTransformer
 from sklearn.preprocessing import normalize
 
+# Model configuration
+EMBEDDING_MODEL = "BAAI/bge-large-en-v1.5"  # BGE model optimized for retrieval
+
 def main():
     print("[INFO] Loading dataset: faculty_ready.csv")
     df = pd.read_csv("data/faculty_ready.csv", encoding="utf-8")
@@ -17,9 +20,9 @@ def main():
 
     print(f"[INFO] Loaded {len(texts)} faculty profiles.")
 
-    print("[INFO] Loading SentenceTransformer model: BAAI/bge-large-en-v1.5")
+    print(f"[INFO] Loading SentenceTransformer model: {EMBEDDING_MODEL}")
     print("[INFO] This model is optimized for retrieval tasks (1024 dimensions)")
-    model = SentenceTransformer("BAAI/bge-large-en-v1.5")
+    model = SentenceTransformer(EMBEDDING_MODEL)
 
     print("[INFO] Generating embeddings with batch processing...")
     embeddings = model.encode(texts, batch_size=32, show_progress_bar=True, normalize_embeddings=True)
@@ -27,6 +30,8 @@ def main():
     # Verify embeddings are normalized
     norms = np.linalg.norm(embeddings, axis=1)
     print(f"[INFO] Embedding normalization check - Mean norm: {norms.mean():.4f}, Std: {norms.std():.4f}")
+    # Tolerance of 1e-3 allows for minor floating-point precision issues
+    # while still catching significant normalization problems
     if not np.allclose(norms, 1.0, atol=1e-3):
         print("[WARNING] Embeddings not properly normalized, applying normalization...")
         embeddings = normalize(embeddings)
