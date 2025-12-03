@@ -17,14 +17,21 @@ def main():
 
     print(f"[INFO] Loaded {len(texts)} faculty profiles.")
 
-    print("[INFO] Loading SentenceTransformer model: all-MiniLM-L6-v2")
-    model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+    print("[INFO] Loading SentenceTransformer model: BAAI/bge-large-en-v1.5")
+    print("[INFO] This model is optimized for retrieval tasks (1024 dimensions)")
+    model = SentenceTransformer("BAAI/bge-large-en-v1.5")
 
-    print("[INFO] Generating embeddings...")
-    embeddings = model.encode(texts, batch_size=16, show_progress_bar=True)
+    print("[INFO] Generating embeddings with batch processing...")
+    embeddings = model.encode(texts, batch_size=32, show_progress_bar=True, normalize_embeddings=True)
 
-    # Normalize embeddings for cosine similarity
-    embeddings = normalize(embeddings)
+    # Verify embeddings are normalized
+    norms = np.linalg.norm(embeddings, axis=1)
+    print(f"[INFO] Embedding normalization check - Mean norm: {norms.mean():.4f}, Std: {norms.std():.4f}")
+    if not np.allclose(norms, 1.0, atol=1e-3):
+        print("[WARNING] Embeddings not properly normalized, applying normalization...")
+        embeddings = normalize(embeddings)
+    else:
+        print("[INFO] ✓ Embeddings are properly normalized")
 
     print("[INFO] Saving embedding matrix...")
     np.save("embeddings.npy", embeddings)

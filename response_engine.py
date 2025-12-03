@@ -61,6 +61,62 @@ def _fuzzy_match_name(text: str, names, threshold: float = 0.65):
     return None
 
 
+class QueryProcessor:
+    """
+    Query processor for domain-specific synonym expansion in CS research areas.
+    Improves retrieval by expanding queries with relevant synonyms and related terms.
+    """
+    
+    def __init__(self):
+        """Initialize query processor with domain-specific synonyms."""
+        # Domain-specific synonym expansion for CS research areas
+        self.synonyms = {
+            'ai': ['artificial intelligence', 'machine learning', 'deep learning', 'neural networks', 'transformers'],
+            'artificial intelligence': ['ai', 'machine learning', 'deep learning', 'neural networks', 'transformers'],
+            'ml': ['machine learning', 'artificial intelligence', 'deep learning', 'neural networks', 'ai'],
+            'machine learning': ['ml', 'artificial intelligence', 'deep learning', 'neural networks', 'ai'],
+            'security': ['cybersecurity', 'privacy', 'cryptography', 'network security', 'secure systems'],
+            'cybersecurity': ['security', 'privacy', 'cryptography', 'network security', 'secure systems'],
+            'hci': ['human computer interaction', 'user experience', 'interface design', 'usability'],
+            'human computer interaction': ['hci', 'user experience', 'interface design', 'usability'],
+            'systems': ['distributed systems', 'operating systems', 'cloud computing', 'parallel computing'],
+            'distributed systems': ['systems', 'cloud computing', 'parallel computing'],
+            'nlp': ['natural language processing', 'computational linguistics', 'text mining'],
+            'natural language processing': ['nlp', 'computational linguistics', 'text mining'],
+            'vision': ['computer vision', 'image processing', 'pattern recognition'],
+            'computer vision': ['vision', 'image processing', 'pattern recognition'],
+            'blockchain': ['distributed ledger', 'cryptocurrency', 'consensus protocols'],
+            'databases': ['data management', 'query optimization', 'nosql', 'sql'],
+            'data management': ['databases', 'query optimization', 'nosql', 'sql'],
+        }
+    
+    def expand_query(self, query: str) -> str:
+        """
+        Expand user query with domain-specific synonyms.
+        
+        Args:
+            query: Original user query
+            
+        Returns:
+            Expanded query with relevant synonyms
+        """
+        query_lower = query.lower()
+        expanded_terms = set()
+        
+        # Find matching terms and add their synonyms
+        for term, synonyms in self.synonyms.items():
+            if term in query_lower:
+                # Add top synonyms (limit to avoid query bloat)
+                expanded_terms.update(synonyms[:3])
+        
+        # Combine original query with expanded terms
+        if expanded_terms:
+            expansion = ' '.join(expanded_terms)
+            return f"{query} {expansion}"
+        
+        return query
+
+
 class ResponseEngine:
     """
     Response engine using Groq API with Llama 3
@@ -104,6 +160,8 @@ class ResponseEngine:
         print(f"Groq API initialized with {self.model}")
 
         # ---------- RAG resources (embeddings + profiles) ----------
+        # Initialize query processor for query expansion
+        self.query_processor = QueryProcessor()
         self._load_rag_resources()
 
     # =================================================================
@@ -135,8 +193,9 @@ class ResponseEngine:
                     f"!= ids count ({len(self.faculty_ids)})"
                 )
 
-            # SentenceTransformers model for query encoding
-            self.embed_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+            # SentenceTransformers model for query encoding (upgraded to BGE model)
+            print("[RAG] Loading embedding model: BAAI/bge-large-en-v1.5")
+            self.embed_model = SentenceTransformer("BAAI/bge-large-en-v1.5")
 
             # Ensure embeddings are L2-normalized (just in case)
             self.embeddings = normalize(self.embeddings)
@@ -196,14 +255,18 @@ class ResponseEngine:
     def retrieve_faculty(self, query, top_k=3):
         """
         Retrieve top_k most relevant faculty profiles for a given query.
+        Now includes query expansion for better retrieval.
         Returns a list of dicts with {name, score, profile_text}.
         """
         if self.embed_model is None or self.embeddings is None:
             print("[RAG] Retrieval requested but RAG resources are not loaded.")
             return []
 
-        # Encode and normalize query
-        q_emb = self.embed_model.encode([query])[0]
+        # Apply query expansion
+        expanded_query = self.query_processor.expand_query(query)
+        
+        # Encode and normalize query (using expanded version)
+        q_emb = self.embed_model.encode([expanded_query])[0]
         q_emb = q_emb / (np.linalg.norm(q_emb) + 1e-12)
 
         # Cosine similarity because embeddings are normalized
@@ -221,6 +284,68 @@ class ResponseEngine:
             })
 
         return results
+
+    def adaptive_retrieve(self, query, min_results=1, max_results=5, 
+                         confidence_threshold=0.30, score_gap_threshold=0.15):
+        """
+        Adaptive retrieval with variable result count based on confidence scores.
+        
+        Args:
+            query: User query string
+            min_results: Minimum number of results to return (default: 1)
+            max_results: Maximum number of results to return (default: 5)
+            confidence_threshold: Minimum score to consider (default: 0.30)
+            score_gap_threshold: If gap between rank 1 and rank 2 exceeds this, 
+                               return only top result (default: 0.15)
+        
+        Returns:
+            List of dicts with {name, score, profile_text}, filtered by confidence
+        """
+        if self.embed_model is None or self.embeddings is None:
+            print("[RAG] Retrieval requested but RAG resources are not loaded.")
+            return []
+
+        # Apply query expansion
+        expanded_query = self.query_processor.expand_query(query)
+        
+        # Encode and normalize query
+        q_emb = self.embed_model.encode([expanded_query])[0]
+        q_emb = q_emb / (np.linalg.norm(q_emb) + 1e-12)
+
+        # Cosine similarity
+        sims = self.embeddings @ q_emb
+
+        # Get top 10 candidates initially
+        num_candidates = min(10, len(sims))
+        idxs = np.argsort(sims)[::-1][:num_candidates]
+        
+        # Build candidate list
+        candidates = []
+        for idx in idxs:
+            score = float(sims[idx])
+            if score >= confidence_threshold:
+                candidates.append({
+                    "name": self.faculty_ids[idx],
+                    "score": score,
+                    "profile_text": self.faculty_texts[idx]
+                })
+        
+        # If no candidates meet threshold, return empty list
+        if not candidates:
+            return []
+        
+        # Apply score gap analysis
+        if len(candidates) >= 2:
+            score_gap = candidates[0]['score'] - candidates[1]['score']
+            if score_gap > score_gap_threshold:
+                # Large gap means top result is clearly best
+                return [candidates[0]]
+        
+        # Return between min_results and max_results based on confidence
+        num_results = min(len(candidates), max_results)
+        num_results = max(num_results, min(min_results, len(candidates)))
+        
+        return candidates[:num_results]
 
     def _list_all_faculty_text(self):
         """Return a human readable list of all faculty names."""
@@ -271,13 +396,19 @@ class ResponseEngine:
 
         return self._query_groq(messages, max_tokens=500)
 
-    def generate_rag_answer(self, user_query, history=None, top_k=3):
+    def generate_rag_answer(self, user_query, history=None, top_k=3, use_adaptive=True):
         """
         RAG mode:
         1) Special handling: list-all queries and fuzzy name matches.
-        2) Otherwise retrieve top_k matching faculty profiles.
+        2) Otherwise retrieve matching faculty profiles using adaptive retrieval.
         3) Inject them into a system message.
         4) Ask Llama to answer using ONLY that faculty context.
+        
+        Args:
+            user_query: User's question
+            history: Conversation history
+            top_k: Number of results for non-adaptive retrieval (legacy parameter)
+            use_adaptive: Whether to use adaptive retrieval (default: True)
         """
 
         # Special case 1: list of all faculty
@@ -291,8 +422,11 @@ class ResponseEngine:
                 # Handle as "tell me about this specific faculty" even if misspelled
                 return self._answer_for_specific_faculty(fuzzy_name, history=history)
 
-        # Normal RAG retrieval
-        retrieved = self.retrieve_faculty(user_query, top_k=top_k)
+        # Normal RAG retrieval - use adaptive retrieval by default
+        if use_adaptive:
+            retrieved = self.adaptive_retrieve(user_query)
+        else:
+            retrieved = self.retrieve_faculty(user_query, top_k=top_k)
 
         # If nothing retrieved, give a clear fallback instead of silence
         if not retrieved:
